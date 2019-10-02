@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/etherparty/bitthief/btckey"
+	"github.com/jeffwalsh/bitthief/btckey"
 )
 
 // TODO: Pass list of words as CLI arg and not hardcoded
